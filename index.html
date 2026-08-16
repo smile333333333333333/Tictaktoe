@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEE // TIC TAC TOE</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #050505;
+    color: #ddd;
+    font-family: monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#game {
+    width: 95vw;
+    max-width: 650px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 22px;
+    letter-spacing: 5px;
+    margin-bottom: 8px;
+}
+
+#status {
+    height: 25px;
+    color: #888;
+    margin-bottom: 15px;
+}
+
+#board {
+    width: min(92vw, 600px);
+    height: min(92vw, 600px);
+    margin: auto;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+    border: 2px solid #555;
+}
+
+.cell {
+    border: 1px solid #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: clamp(14px, 5vw, 30px);
+    cursor: pointer;
+    user-select: none;
+}
+
+.cell:hover {
+    background: #151515;
+}
+
+.x {
+    color: #fff;
+}
+
+.o {
+    color: #666;
+}
+
+.blocked {
+    background: #000;
+    color: #222;
+    cursor: not-allowed;
+}
+
+.winning {
+    background: #333;
+}
+
+button {
+    margin-top: 20px;
+    padding: 10px 25px;
+    background: #080808;
+    color: #aaa;
+    border: 1px solid #555;
+    font-family: monospace;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #222;
+    color: white;
+}
+
+#reward {
+    display: none;
+    font-size: 110px;
+    margin-top: 20px;
+    text-shadow: 0 0 25px white;
+}
+
+#rewardText {
+    display: none;
+    color: #777;
+    letter-spacing: 3px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+    <h1>HEE // GRID TEST</h1>
+
+    <div id="status">YOUR TURN</div>
+
+    <div id="board"></div>
+
+    <button onclick="restart()">RESET</button>
+
+    <div id="reward">8</div>
+    <div id="rewardText">NUMBER ACQUIRED</div>
+
+</div>
+
+<script>
+
+const SIZE = 10;
+const WIN = 3;
+
+let board = [];
+let blocked = -1;
+let gameOver = false;
+
+const boardElement = document.getElementById("board");
+const statusElement = document.getElementById("status");
+const rewardElement = document.getElementById("reward");
+const rewardText = document.getElementById("rewardText");
+
+
+// =============================
+// START
+// =============================
+
+function startGame() {
+
+    board = Array(100).fill("");
+
+    gameOver = false;
+
+    blocked = Math.floor(Math.random() * 100);
+
+    rewardElement.style.display = "none";
+    rewardText.style.display = "none";
+
+    statusElement.textContent = "YOUR TURN";
+
+    drawBoard();
+}
+
+
+// =============================
+// DRAW BOARD
+// =============================
+
+function drawBoard() {
+
+    boardElement.innerHTML = "";
+
+    for (let i = 0; i < 100; i++) {
+
+        const cell = document.createElement("div");
+
+        cell.className = "cell";
+
+        if (i === blocked) {
+
+            cell.classList.add("blocked");
+            cell.textContent = "×";
+
+        } else {
+
+            cell.textContent = board[i];
+
+            if (board[i] === "X") {
+                cell.classList.add("x");
+            }
+
+            if (board[i] === "O") {
+                cell.classList.add("o");
+            }
+
+            cell.onclick = function() {
+                playerMove(i);
+            };
+        }
+
+        boardElement.appendChild(cell);
+    }
+}
+
+
+// =============================
+// PLAYER MOVE
+// =============================
+
+function playerMove(index) {
+
+    if (gameOver) return;
+
+    if (index === blocked) return;
+
+    if (board[index] !== "") return;
+
+    board[index] = "X";
+
+    drawBoard();
+
+    if (checkWin("X")) {
+
+        win();
+        return;
+    }
+
+    if (isFull()) {
+
+        gameOver = true;
+        statusElement.textContent = "DRAW";
+        return;
+    }
+
+    statusElement.textContent = "AI THINKING...";
+
+    setTimeout(aiMove, 300);
+}
+
+
+// =============================
+// AI MOVE
+// =============================
+
+function aiMove() {
+
+    if (gameOver) return;
+
+    let move = findWinningMove("O");
+
+    // Block the player
+    if (move === -1) {
+        move = findWinningMove("X");
+    }
+
+    // Try random spaces
+    if (move === -1) {
+
+        let spaces = [];
+
+        for (let i = 0; i < 100; i++) {
+
+            if (
+                board[i] === "" &&
+                i !== blocked
+            ) {
+                spaces.push(i);
+            }
+        }
+
+        if (spaces.length > 0) {
+
+            move =
+                spaces[Math.floor(Math.random() * spaces.length)];
+        }
+    }
+
+    if (move !== -1) {
+
+        board[move] = "O";
+
+        drawBoard();
+
+        if (checkWin("O")) {
+
+            gameOver = true;
+            statusElement.textContent = "AI WINS";
+            return;
+        }
+    }
+
+    if (isFull()) {
+
+        gameOver = true;
+        statusElement.textContent = "DRAW";
+        return;
+    }
+
+    statusElement.textContent = "YOUR TURN";
+}
+
+
+// =============================
+// FIND WINNING MOVE
+// =============================
+
+function findWinningMove(player) {
+
+    for (let i = 0; i < 100; i++) {
+
+        if (
+            board[i] !== "" ||
+            i === blocked
+        ) {
+            continue;
+        }
+
+        board[i] = player;
+
+        if (checkWin(player)) {
+
+            board[i] = "";
+            return i;
+        }
+
+        board[i] = "";
+    }
+
+    return -1;
+}
+
+
+// =============================
+// CHECK WIN
+// =============================
+
+function checkWin(player) {
+
+    const directions = [
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, -1]
+    ];
+
+    for (let row = 0; row < SIZE; row++) {
+
+        for (let col = 0; col < SIZE; col++) {
+
+            for (const direction of directions) {
+
+                const dr = direction[0];
+                const dc = direction[1];
+
+                let count = 0;
+
+                for (let n = 0; n < WIN; n++) {
+
+                    const r = row + dr * n;
+                    const c = col + dc * n;
+
+                    if (
+                        r < 0 ||
+                        r >= SIZE ||
+                        c < 0 ||
+                        c >= SIZE
+                    ) {
+                        break;
+                    }
+
+                    const index = r * SIZE + c;
+
+                    if (board[index] === player) {
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+
+                if (count === WIN) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+
+// =============================
+// FULL BOARD
+// =============================
+
+function isFull() {
+
+    for (let i = 0; i < 100; i++) {
+
+        if (
+            board[i] === "" &&
+            i !== blocked
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+// =============================
+// PLAYER WINS
+// =============================
+
+function win() {
+
+    gameOver = true;
+
+    statusElement.textContent = "TEST COMPLETE";
+
+    rewardElement.style.display = "block";
+    rewardText.style.display = "block";
+}
+
+
+// =============================
+// RESET
+// =============================
+
+function restart() {
+    startGame();
+}
+
+
+// Start game
+startGame();
+
+</script>
+
+</body>
+  </html>
